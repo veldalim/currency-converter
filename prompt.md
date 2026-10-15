@@ -14,8 +14,16 @@ build just the front end for now, i will include the backend connection later.
 
 ---
 
-### Prompt 2: Git Push
+### Prompt 2: Initial Git Push Attempt
 
 ```text
 git push https://<GITHUB_TOKEN>@github.com/veldalim/bus-arrival-LTA.git
+```
+
+---
+
+### Prompt 3: Git Push to Currency Converter Repository
+
+```text
+git push https://<GITHUB_TOKEN>@github.com/veldalim/currency-converter.git
 ```
