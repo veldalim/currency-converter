@@ -27,3 +27,11 @@ git push https://<GITHUB_TOKEN>@github.com/veldalim/bus-arrival-LTA.git
 ```text
 git push https://<GITHUB_TOKEN>@github.com/veldalim/currency-converter.git
 ```
+
+---
+
+### Prompt 4: CurrencyPickerModal Search & Category Filtering
+
+```text
+Enhance the CurrencyPickerModal with a search bar and category filtering (e.g., 'Favorites', 'Asia', 'Europe') to help users quickly find currencies in a long list.
+```
