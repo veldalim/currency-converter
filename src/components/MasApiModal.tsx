@@ -3,9 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { X, Check, Copy, ExternalLink, KeyRound, Server, ShieldAlert, Sparkles, Terminal } from 'lucide-react';
-import { MasApiConfig, RatesService } from '../services/ratesService';
+import React, { useState, useEffect } from 'react';
+import { 
+  X, 
+  Check, 
+  Copy, 
+  ExternalLink, 
+  KeyRound, 
+  Server, 
+  ShieldAlert, 
+  Sparkles, 
+  Terminal, 
+  Activity, 
+  FolderCheck,
+  RefreshCw
+} from 'lucide-react';
+import { RatesService } from '../services/ratesService';
 
 interface MasApiModalProps {
   isOpen: boolean;
@@ -18,72 +31,69 @@ export const MasApiModal: React.FC<MasApiModalProps> = ({
   onClose,
   onRatesRefreshed,
 }) => {
-  const [config, setConfig] = useState<MasApiConfig>(RatesService.getMasConfig());
-  const [copiedCode, setCopiedCode] = useState<boolean>(false);
-  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [testingStatus, setTestingStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [testMessage, setTestMessage] = useState<string>('');
+  const [testOutput, setTestOutput] = useState<any>(null);
+  const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [backendHealth, setBackendHealth] = useState<{
+    isOnline: boolean;
+    isKeyConfigured: boolean;
+    keyIdPreview?: string;
+    sgtTime?: string;
+  } | null>(null);
+
+  const masCatalogueUrl =
+    'https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610ora/exchange_rates_end_of_period_daily/views/exchange_rates_end_of_period_daily?end_of_day=2026-10-14';
+
+  useEffect(() => {
+    if (isOpen) {
+      RatesService.checkBackendHealth().then((res) => setBackendHealth(res));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    RatesService.saveMasConfig(config);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2000);
-  };
-
-  const handleTestConnection = async () => {
+  const testHealthEndpoint = async () => {
     setTestingStatus('testing');
-    setTestMessage('Pinging MAS Exchange Rates datastore schema...');
-
-    // Simulate backend verification
-    setTimeout(() => {
-      if (!config.apiKey && config.useLiveApi) {
-        setTestingStatus('error');
-        setTestMessage('API Key missing. Enter your MAS developer key or keep Mock Mode enabled.');
-      } else {
-        setTestingStatus('success');
-        setTestMessage('MAS exchange rates schema validated! 20+ pairs mapped to SGD base.');
-        onRatesRefreshed();
-      }
-    }, 1200);
+    try {
+      const res = await fetch('/api/health');
+      const data = await res.json();
+      setTestOutput({ endpoint: 'GET /api/health', status: res.status, data });
+      setTestingStatus(res.ok ? 'success' : 'error');
+      setBackendHealth({
+        isOnline: res.ok,
+        isKeyConfigured: Boolean(data?.masGateway?.isKeyConfigured),
+        keyIdPreview: data?.masGateway?.keyIdPreview,
+        sgtTime: data?.sgtTime,
+      });
+    } catch (err: any) {
+      setTestOutput({ endpoint: 'GET /api/health', error: err?.message });
+      setTestingStatus('error');
+    }
   };
 
-  const sampleBackendCode = `// Sample Express / Node.js backend route for MAS Exchange Rates API
-// File: server/routes/rates.js
-
-import express from 'express';
-const router = express.Router();
-
-router.get('/api/mas-exchange-rates', async (req, res) => {
-  try {
-    const MAS_API_KEY = process.env.MAS_API_KEY;
-    const resourceId = '95932927-9e5c-44d0-ac7a-97491cf64547'; // Exchange Rates dataset
-    
-    const response = await fetch(
-      \`https://eservices.mas.gov.sg/api/action/datastore/search.json?resource_id=\${resourceId}&limit=1&sort=end_of_day%20desc\`,
-      {
-        headers: {
-          'api_key': MAS_API_KEY,
-          'Accept': 'application/json'
-        }
+  const testExchangeRatesEndpoint = async () => {
+    setTestingStatus('testing');
+    try {
+      const res = await fetch('/api/exchangerates?end_of_day=2026-10-14');
+      const data = await res.json();
+      setTestOutput({ endpoint: 'GET /api/exchangerates?end_of_day=2026-10-14', status: res.status, data });
+      if (res.ok && data.success) {
+        setTestingStatus('success');
+        onRatesRefreshed();
+      } else {
+        // e.g. 401 missing key
+        setTestingStatus('error');
       }
-    );
-    
-    const data = await response.json();
-    return res.json(data.result.records[0]);
-  } catch (error) {
-    console.error('Error fetching MAS rates:', error);
-    return res.status(500).json({ error: 'Failed to retrieve rates' });
-  }
-});
+    } catch (err: any) {
+      setTestOutput({ endpoint: 'GET /api/exchangerates', error: err?.message });
+      setTestingStatus('error');
+    }
+  };
 
-export default router;`;
-
-  const copyCode = () => {
-    navigator.clipboard.writeText(sampleBackendCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2500);
+  const copyUrl = () => {
+    navigator.clipboard.writeText(masCatalogueUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
   };
 
   return (
@@ -99,9 +109,14 @@ export default router;`;
               <Server className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-white text-base">MAS API Integration Hub</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-white text-base">MAS Serverless API Hub</h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800/60">
+                  /api/exchangerates.ts
+                </span>
+              </div>
               <p className="text-xs text-slate-400">
-                Monetary Authority of Singapore (MAS) Exchange Rates Backend Hook
+                Live connection to MAS Exchange Rates End of Period Daily Catalogue
               </p>
             </div>
           </div>
@@ -115,141 +130,118 @@ export default router;`;
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto space-y-5 text-xs text-slate-300">
+        <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-300">
           
-          {/* Note informing the user that frontend is ready and waiting for their key */}
-          <div className="p-3.5 rounded-2xl bg-sky-950/30 border border-sky-800/40">
-            <div className="flex items-center gap-2 text-sky-300 font-semibold mb-1">
-              <Sparkles className="w-4 h-4" />
-              <span>Frontend Architecture Ready for MAS API</span>
-            </div>
-            <p className="text-slate-300 leading-relaxed text-xs">
-              As requested, the complete frontend with real-time conversion, search, favorites, and calculator is operational with realistic benchmark rates. When you receive your MAS API credentials from the Singapore government portal (data.gov.sg / MAS developer portal), you can configure your backend proxy below.
-            </p>
-          </div>
-
-          {/* Form Settings */}
-          <div className="space-y-3 p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-            <h4 className="font-bold text-white text-sm flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-amber-400" />
-              API Key &amp; Endpoint Configuration
-            </h4>
-
+          {/* KeyId Status Banner */}
+          <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <label className="block text-slate-400 font-medium mb-1">MAS Datastore API Endpoint</label>
-              <input
-                type="text"
-                value={config.endpoint}
-                onChange={(e) => setConfig({ ...config, endpoint: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-400 font-medium mb-1">Exchange Rates Resource ID</label>
-              <input
-                type="text"
-                value={config.resourceId}
-                onChange={(e) => setConfig({ ...config, resourceId: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-400 font-medium mb-1">
-                MAS API Key (or backend proxy token)
-              </label>
-              <input
-                type="password"
-                placeholder="Paste your MAS API Key here when obtained..."
-                value={config.apiKey}
-                onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-sky-500 placeholder-slate-600"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={config.useLiveApi}
-                  onChange={(e) => setConfig({ ...config, useLiveApi: e.target.checked })}
-                  className="rounded border-slate-700 text-sky-500 focus:ring-0 bg-slate-900 w-4 h-4"
-                />
-                <span className="text-white font-medium">Enable Live External API Mode</span>
-              </label>
-
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleTestConnection}
-                  disabled={testingStatus === 'testing'}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-colors"
-                >
-                  {testingStatus === 'testing' ? 'Testing...' : 'Test Schema'}
-                </button>
-
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition-colors flex items-center gap-1.5"
-                >
-                  {saveSuccess ? <Check className="w-3.5 h-3.5" /> : null}
-                  <span>{saveSuccess ? 'Saved!' : 'Save Config'}</span>
-                </button>
+                <KeyRound className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-white text-sm">MAS KeyId Environment Status</span>
               </div>
+              <p className="text-slate-400 mt-1">
+                {backendHealth?.isKeyConfigured ? (
+                  <span className="text-emerald-400 font-medium">
+                    Configured securely in environment ({backendHealth.keyIdPreview})
+                  </span>
+                ) : (
+                  <span className="text-amber-400">
+                    No KeyId set in environment yet. Add <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">MAS_KEY_ID=&quot;YOUR_KEY&quot;</code> to your secrets or <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">.env</code>.
+                  </span>
+                )}
+              </p>
             </div>
 
-            {testMessage && (
-              <div
-                className={`p-2.5 rounded-xl text-xs font-mono flex items-center gap-2 ${
-                  testingStatus === 'success'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : testingStatus === 'error'
-                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    : 'bg-slate-800 text-slate-300'
-                }`}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={testHealthEndpoint}
+                disabled={testingStatus === 'testing'}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-colors flex items-center gap-1.5"
               >
-                {testingStatus === 'error' ? (
-                  <ShieldAlert className="w-4 h-4 shrink-0" />
-                ) : (
-                  <Check className="w-4 h-4 shrink-0" />
-                )}
-                <span>{testMessage}</span>
-              </div>
-            )}
+                <Activity className="w-3.5 h-3.5 text-sky-400" />
+                <span>Test /health</span>
+              </button>
+
+              <button
+                onClick={testExchangeRatesEndpoint}
+                disabled={testingStatus === 'testing'}
+                className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition-colors flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${testingStatus === 'testing' ? 'animate-spin' : ''}`} />
+                <span>Test /exchangerates</span>
+              </button>
+            </div>
           </div>
 
-          {/* Code snippet for Express Backend */}
-          <div className="space-y-2">
+          {/* Directory Architecture */}
+          <div className="p-3.5 rounded-2xl bg-slate-950/40 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 text-slate-200 font-semibold">
+              <FolderCheck className="w-4 h-4 text-emerald-400" />
+              <span>Serverless Handlers in Project Root (/api):</span>
+            </div>
+            <div className="font-mono text-[11px] space-y-1.5 text-slate-300">
+              <div className="p-2 bg-slate-900 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                <span>/api/health.ts</span>
+                <span className="text-sky-400 text-[10px]">GET /api/health</span>
+              </div>
+              <div className="p-2 bg-slate-900 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                <span>/api/exchangerates.ts</span>
+                <span className="text-emerald-400 text-[10px]">GET /api/exchangerates?end_of_day=YYYY-MM-DD</span>
+              </div>
+            </div>
+          </div>
+
+          {/* MAS Endpoint Specification */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-white flex items-center gap-1.5">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                Ready-to-use Express Backend Template:
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-sky-400" />
+                Configured MAS Catalogue Target Endpoint:
               </span>
               <button
-                onClick={copyCode}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition-colors"
+                onClick={copyUrl}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]"
               >
-                {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
+                {copiedUrl ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
               </button>
             </div>
 
-            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] overflow-x-auto text-slate-300">
-              <pre>{sampleBackendCode}</pre>
+            <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 font-mono text-[11px] text-sky-300 break-all select-all">
+              {masCatalogueUrl}
+            </div>
+
+            <div className="text-[11px] text-slate-400">
+              Header required by MAS Gateway: <code className="text-white font-mono bg-slate-900 px-1 py-0.5 rounded">KeyId: &lt;MAS_KEY_ID&gt;</code> (handled automatically via serverless route).
             </div>
           </div>
+
+          {/* Test Output Console */}
+          {testOutput && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <span>Response Console ({testOutput.endpoint}):</span>
+                <span className={testingStatus === 'success' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                  HTTP {testOutput.status || 500}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-300 max-h-48 overflow-y-auto">
+                <pre>{JSON.stringify(testOutput.data || testOutput, null, 2)}</pre>
+              </div>
+            </div>
+          )}
 
         </div>
 
         {/* Modal Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
           <a
-            href="https://eservices.mas.gov.sg/statistics/api/ExchangeRates.aspx"
+            href="https://eservices.mas.gov.sg/statistics/masapi.aspx"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-sky-400 hover:underline flex items-center gap-1 font-medium"
           >
-            <span>Visit MAS Exchange Rates Portal</span>
+            <span>MAS API Gateway Portal</span>
             <ExternalLink className="w-3 h-3" />
           </a>
 

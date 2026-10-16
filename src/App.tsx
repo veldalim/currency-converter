@@ -62,14 +62,36 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleManualRefresh = () => {
+  // Try fetching live rates from /api/exchangerates on mount
+  useEffect(() => {
+    RatesService.fetchLiveMasRates().then((res) => {
+      if (res.success) {
+        setRates({ ...RatesService.getRates() });
+        setLastUpdated(RatesService.getLastUpdatedTime());
+      }
+    });
+  }, []);
+
+  const handleManualRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      const liveResult = await RatesService.fetchLiveMasRates();
+      if (liveResult.success) {
+        setRates({ ...RatesService.getRates() });
+        setLastUpdated(RatesService.getLastUpdatedTime());
+      } else {
+        // Fallback simulation
+        const updated = RatesService.refreshRates();
+        setRates({ ...updated });
+        setLastUpdated(RatesService.getLastUpdatedTime());
+      }
+    } catch {
       const updated = RatesService.refreshRates();
       setRates({ ...updated });
       setLastUpdated(RatesService.getLastUpdatedTime());
+    } finally {
       setIsRefreshing(false);
-    }, 450);
+    }
   };
 
   const handleToggleFavorite = (code: string) => {

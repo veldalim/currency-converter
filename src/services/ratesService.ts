@@ -270,4 +270,94 @@ export class RatesService {
   public static getLastUpdatedTime(): string {
     return this.lastUpdatedTime;
   }
+
+  /**
+   * Checks the health and MAS Gateway configuration status of /api/health
+   */
+  public static async checkBackendHealth(): Promise<{
+    isOnline: boolean;
+    isKeyConfigured: boolean;
+    keyIdPreview?: string;
+    sgtTime?: string;
+  }> {
+    try {
+      const res = await fetch('/api/health');
+      if (!res.ok) {
+        return { isOnline: false, isKeyConfigured: false };
+      }
+      const data = await res.json();
+      return {
+        isOnline: true,
+        isKeyConfigured: Boolean(data?.masGateway?.isKeyConfigured),
+        keyIdPreview: data?.masGateway?.keyIdPreview,
+        sgtTime: data?.sgtTime,
+      };
+    } catch {
+      return { isOnline: false, isKeyConfigured: false };
+    }
+  }
+
+  /**
+   * Attempts to fetch live daily exchange rates from /api/exchangerates
+   */
+  public static async fetchLiveMasRates(endOfDay?: string): Promise<{
+    success: boolean;
+    source?: string;
+    rates?: Record<string, number>;
+    error?: string;
+    code?: string;
+    hint?: string;
+  }> {
+    try {
+      const url = endOfDay
+        ? `/api/exchangerates?end_of_day=${encodeURIComponent(endOfDay)}`
+        : '/api/exchangerates';
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (res.ok && data.success && data.rates) {
+        const current = this.getRates();
+        const updated: Record<string, RateData> = { ...current };
+        const now = new Date().toISOString();
+        this.lastUpdatedTime = now;
+
+        for (const [code, newRateToSgd] of Object.entries(data.rates as Record<string, number>)) {
+          if (updated[code]) {
+            const oldRate = updated[code].rateToSgd;
+            const changePercent = oldRate > 0 ? +(((newRateToSgd - oldRate) / oldRate) * 100).toFixed(2) : 0;
+            const newRateFromSgd = +(1 / newRateToSgd).toPrecision(6);
+            const history = [...updated[code].history7d.slice(1), newRateToSgd];
+
+            updated[code] = {
+              ...updated[code],
+              rateToSgd: newRateToSgd,
+              rateFromSgd: newRateFromSgd,
+              change24h: changePercent !== 0 ? changePercent : updated[code].change24h,
+              dayHigh: Math.max(updated[code].dayHigh, newRateToSgd),
+              dayLow: Math.min(updated[code].dayLow, newRateToSgd),
+              history7d: history,
+              lastUpdated: now,
+            };
+          }
+        }
+
+        this.ratesCache = updated;
+        return { success: true, source: data.source, rates: data.rates };
+      }
+
+      return {
+        success: false,
+        error: data.error || 'Failed to fetch MAS rates',
+        code: data.code,
+        hint: data.hint,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || 'Network error connecting to /api/exchangerates',
+      };
+    }
+  }
 }
+

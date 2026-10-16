@@ -15,6 +15,8 @@ interface NavbarProps {
   lastUpdated: string;
 }
 
+import { RatesService } from '../services/ratesService';
+
 export const Navbar: React.FC<NavbarProps> = ({
   rates,
   onRefresh,
@@ -23,8 +25,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   lastUpdated,
 }) => {
   const [sgtTime, setSgtTime] = useState<string>('');
+  const [masGatewayStatus, setMasGatewayStatus] = useState<{
+    checked: boolean;
+    isKeyConfigured: boolean;
+    keyIdPreview?: string;
+  }>({ checked: false, isKeyConfigured: false });
 
   useEffect(() => {
+    // Check backend health for MAS API connection
+    RatesService.checkBackendHealth().then((res) => {
+      setMasGatewayStatus({
+        checked: true,
+        isKeyConfigured: res.isKeyConfigured,
+        keyIdPreview: res.keyIdPreview,
+      });
+    });
+
     const updateTime = () => {
       // Singapore Time is UTC+8
       const now = new Date();
@@ -97,10 +113,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-mono-nums font-semibold text-white">{sgtTime || '12:00:00 PM'}</span>
             </div>
 
-            <div className="flex items-center gap-1.5 text-slate-400">
+            <button
+              onClick={onOpenMasModal}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            >
               <Landmark className="w-3.5 h-3.5 text-sky-400" />
-              <span>MAS Daily Reference Ready</span>
-            </div>
+              {masGatewayStatus.isKeyConfigured ? (
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  MAS API Live ({masGatewayStatus.keyIdPreview})
+                </span>
+              ) : (
+                <span className="text-slate-400">
+                  MAS Gateway: KeyId Pending
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Actions: Refresh & Backend MAS Config */}

@@ -54,3 +54,18 @@ Enhance the CurrencyPickerModal with a search bar and category filtering (e.g., 
 git push https://<GITHUB_TOKEN>@github.com/veldalim/currency-converter.git
 ```
 
+---
+
+### Prompt 7: Serverless MAS API Integration (/api/health.ts and /api/exchangerates.ts)
+
+```text
+1. add a serverless API connection that pulls live data from MAS API catalogue using the following endpoint:
+
+GET https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610ora/exchange_rates_end_of_period_daily/views/exchange_rates_end_of_period_daily?end_of_day=2026-10-14
+# KeyId: <MAS_KEY_ID>
+2. store this in /api folder at the project root level not the src folder
+3. include /health.ts and /exchangerates.ts within the same subfolder
+4. do not hardcode any API key, i will manually include them
+```
+
+
