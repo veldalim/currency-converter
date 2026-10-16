@@ -1,0 +1,6 @@
+{
+  "name": "BreezeSG - Singapore Air Quality & Live PSI Alerts",
+  "description": "Live Singapore PSI & PM2.5 air quality monitoring with interactive regional map, threshold alerts, and push notifications.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
