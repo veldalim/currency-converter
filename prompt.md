@@ -76,5 +76,72 @@ GET https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_no
 git push https://<GITHUB_TOKEN>@github.com/veldalim/currency-converter.git
 ```
 
+---
+
+### Prompt 9: Embed Disqus Forum "Talk to us" Tab
+
+```text
+create a tab "Talk to us" and embed a disqus forum using the following:
+import { DiscussionEmbed } from 'disqus-react';
+
+1. Discussion Embed:
+<DiscussionEmbed
+    shortname='exchange-rate-mas'
+    config={
+        {
+            url: this.props.article.url,
+            identifier: this.props.article.id,
+            title: this.props.article.title,
+            language: 'en'
+        }
+    }
+/>
+
+2. Comment Count:
+import { CommentCount } from 'disqus-react';
+
+<CommentCount
+    shortname='exchange-rate-mas'
+    config={
+        {
+            url: this.props.article.url,
+            identifier: this.props.article.id,
+            title: this.props.article.title,
+        }
+    }
+>
+    {/* Placeholder Text */}
+    Comments
+</CommentCount>
+
+3. Single Sign-On (SSO)
+import { DiscussionEmbed } from 'disqus-react';
+
+<DiscussionEmbed
+    shortname='exchange-rate-mas'
+    config={
+        {
+            url: this.props.article.url,
+            identifier: this.props.article.id,
+            title: this.props.article.title,
+            language: 'en',
+            remoteAuthS3: '',
+            apiKey: '', 
+            sso: {
+                name: 'SampleNews',
+                button: 'http://example.com/images/samplenews.gif',
+                icon: 'http://example.com/favicon.png',
+                url: 'http://example.com/login/',
+                logout: 'http://example.com/logout/',
+                profile_url: 'http://example.com/profileUrlTemplate/{username}',
+                width: '800',
+                height: '400',
+            }
+        }
+    }
+/>
+```
+
+
 
 

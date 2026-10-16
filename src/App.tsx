@@ -17,7 +17,8 @@ import {
   Compass,
   Building2,
   PlaneTakeoff,
-  Landmark
+  Landmark,
+  MessageSquare
 } from 'lucide-react';
 import { RatesService } from './services/ratesService';
 import { MergedCurrency, QuoteDisplayMode, SortOption, Region } from './types/currency';
@@ -27,8 +28,10 @@ import { CurrencyCard } from './components/CurrencyCard';
 import { CurrencyTable } from './components/CurrencyTable';
 import { CurrencyDetailModal } from './components/CurrencyDetailModal';
 import { MasApiModal } from './components/MasApiModal';
+import { TalkToUs } from './components/TalkToUs';
 
 export default function App() {
+  const [mainNavTab, setMainNavTab] = useState<'rates' | 'talk'>('rates');
   const [rates, setRates] = useState(RatesService.getRates());
   const [currencies, setCurrencies] = useState<MergedCurrency[]>([]);
   const [favorites, setFavorites] = useState<string[]>(RatesService.getFavorites());
@@ -157,17 +160,22 @@ export default function App() {
         isRefreshing={isRefreshing}
         onOpenMasModal={() => setIsMasModalOpen(true)}
         lastUpdated={lastUpdated}
+        activeNav={mainNavTab}
+        onNavChange={(tab) => setMainNavTab(tab)}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full space-y-8">
-        
-        {/* Converter / Calculator Section */}
-        <section ref={calculatorRef} className="scroll-mt-20">
-          <Calculator
-            rates={rates}
-            favorites={favorites}
-          />
-        </section>
+        {mainNavTab === 'talk' ? (
+          <TalkToUs />
+        ) : (
+          <>
+            {/* Converter / Calculator Section */}
+            <section ref={calculatorRef} className="scroll-mt-20">
+              <Calculator
+                rates={rates}
+                favorites={favorites}
+              />
+            </section>
 
         {/* Currency Explorer & Rates Monitor */}
         <section className="space-y-4">
@@ -352,6 +360,14 @@ export default function App() {
                 <Building2 className="w-3.5 h-3.5 text-purple-400" />
                 <span>Major Global FX</span>
               </button>
+
+              <button
+                onClick={() => setMainNavTab('talk')}
+                className="px-3 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 text-sky-400 hover:text-sky-300 bg-sky-950/40 hover:bg-sky-900/50 border border-sky-800/50 ml-auto"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Talk to us (Forum)</span>
+              </button>
             </div>
           </div>
 
@@ -435,7 +451,9 @@ export default function App() {
             </p>
           </div>
 
-        </section>
+            </section>
+          </>
+        )}
 
       </main>
 
@@ -450,10 +468,18 @@ export default function App() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setIsMasModalOpen(true)}
-              className="text-sky-400 hover:underline"
+              onClick={() => setMainNavTab('talk')}
+              className="text-sky-400 hover:underline flex items-center gap-1"
             >
-              MAS API Integration Setup
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Talk to us Forum</span>
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              onClick={() => setIsMasModalOpen(true)}
+              className="text-slate-400 hover:text-white hover:underline"
+            >
+              MAS API Setup
             </button>
             <span aria-hidden="true">·</span>
             <span>SGT UTC+8 Benchmark</span>

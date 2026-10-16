@@ -13,9 +13,13 @@ interface NavbarProps {
   isRefreshing: boolean;
   onOpenMasModal: () => void;
   lastUpdated: string;
+  activeNav?: 'rates' | 'talk';
+  onNavChange?: (nav: 'rates' | 'talk') => void;
 }
 
 import { RatesService } from '../services/ratesService';
+import { MessageSquare, Coins } from 'lucide-react';
+import { CommentCount } from 'disqus-react';
 
 export const Navbar: React.FC<NavbarProps> = ({
   rates,
@@ -23,6 +27,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isRefreshing,
   onOpenMasModal,
   lastUpdated,
+  activeNav = 'rates',
+  onNavChange,
 }) => {
   const [sgtTime, setSgtTime] = useState<string>('');
   const [masGatewayStatus, setMasGatewayStatus] = useState<{
@@ -105,8 +111,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
+          {/* Main Navigation Tabs (Rates & Calculator vs Talk to us) */}
+          <nav className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 rounded-2xl p-1">
+            <button
+              onClick={() => onNavChange?.('rates')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                activeNav === 'rates'
+                  ? 'bg-slate-800 text-white shadow-sm border border-slate-700/80'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Coins className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Rates &amp; Calculator</span>
+            </button>
+
+            <button
+              onClick={() => onNavChange?.('talk')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                activeNav === 'talk'
+                  ? 'bg-sky-600 text-white shadow-lg shadow-sky-950/50 border border-sky-500'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-sky-300" />
+              <span>Talk to us</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950/60 text-sky-200 border border-sky-400/30 font-mono-nums">
+                <CommentCount
+                  shortname="exchange-rate-mas"
+                  config={{
+                    identifier: 'exchange-rate-mas-general',
+                    url: typeof window !== 'undefined' ? `${window.location.origin}/#general` : 'https://exchange-rate-mas.example.com/#general',
+                    title: 'General Feedback - SG FX Live',
+                  }}
+                >
+                  Forum
+                </CommentCount>
+              </span>
+            </button>
+          </nav>
+
           {/* SGT Clock & Status */}
-          <div className="hidden md:flex items-center gap-4 text-xs">
+          <div className="hidden lg:flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
               <span>SGT (UTC+8):</span>
