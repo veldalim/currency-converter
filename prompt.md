@@ -142,6 +142,15 @@ import { DiscussionEmbed } from 'disqus-react';
 />
 ```
 
+---
+
+### Prompt 10: Push to GitHub Repository
+
+```text
+git push https://<GITHUB_TOKEN>@github.com/veldalim/currency-converter.git
+```
+
+
 
 
 
