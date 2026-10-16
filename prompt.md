@@ -68,4 +68,13 @@ GET https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_no
 4. do not hardcode any API key, i will manually include them
 ```
 
+---
+
+### Prompt 8: Push to GitHub Repository
+
+```text
+git push https://<GITHUB_TOKEN>@github.com/veldalim/currency-converter.git
+```
+
+
 
